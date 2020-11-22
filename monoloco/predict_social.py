@@ -1,8 +1,6 @@
 from datetime import datetime
-<<<<<<< HEAD
+
 import time
-=======
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
 import os
 import glob
 import math
@@ -23,11 +21,7 @@ from .network.process import factory_for_gt, preprocess_pifpaf, image_transform
 from .utils import open_annotations
 
 
-<<<<<<< HEAD
-=======
 
-
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
 def predict(args):
     cnt = 0
     # add args.device
@@ -35,19 +29,12 @@ def predict(args):
     if torch.cuda.is_available():
         args.device = torch.device('cuda')
 
-<<<<<<< HEAD
-=======
-    print(datetime.now())
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
+
     # load models
     args.camera = True
     pifpaf = PifPaf(args)
     monoloco = MonoLoco(model=args.model, device=args.device)
-<<<<<<< HEAD
 
-=======
-    print(datetime.now())
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
     # Start recording
     print('Webcam On')
     cam = cv2.VideoCapture(0)
@@ -56,29 +43,17 @@ def predict(args):
         file_name = str(datetime.now())
 
         ret, frame = cam.read()
-<<<<<<< HEAD
-=======
-        print(datetime.now())
-        if not ret:
-            break
-        key = cv2.waitKey(1)
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
 
         image = cv2.resize(frame, None, fx=args.scale, fy=args.scale)
         height, width, _ = image.shape
         print('resized image size: {}'.format(image.shape))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-<<<<<<< HEAD
 
-=======
-        print(datetime.now())
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
         print('Image processing')
         processed_image_cpu = image_transform(image.copy())
         processed_image = processed_image_cpu.contiguous().to(args.device, non_blocking=True)
         fields = pifpaf.fields(torch.unsqueeze(processed_image, 0))[0]
         _, _, pifpaf_out = pifpaf.forward(image, processed_image_cpu, fields)
-<<<<<<< HEAD
 
         if not ret:
             break
@@ -89,9 +64,6 @@ def predict(args):
             print("Escape hit, closing...")
             break
 
-=======
-        print(datetime.now())
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
         pil_image = Image.fromarray(image)
         intrinsic_size = [xx * 1.3 for xx in pil_image.size]
 
@@ -100,41 +72,22 @@ def predict(args):
         else:
             output_path = args.output_directory
 
-<<<<<<< HEAD
         kk, dic_gt = factory_for_gt(intrinsic_size, path_gt=args.path_gt)
         image_t = image
 
-=======
-        print(datetime.now())
-        kk, dic_gt = factory_for_gt(intrinsic_size, path_gt=args.path_gt)
-        image_t = image
-        print(datetime.now())
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
         print('Run monoloco')
         # Run Monoloco
         boxes, keypoints = preprocess_pifpaf(pifpaf_out, intrinsic_size, enlarge_boxes=False)
         dic_out = monoloco.forward(keypoints, kk)
         dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
-<<<<<<< HEAD
 
         # Print
         show_social(args, image_t, output_path + file_name, pifpaf_out, dic_out)
         print(datetime.now())
         print('Image {}\n'.format(cnt) + '-' * 120)
         cnt += 1
-=======
+
         print(datetime.now())
-        # Print
-        show_social(args, image_t, output_path+file_name, pifpaf_out, dic_out)
-        print(datetime.now())
-        print('Image {}\n'.format(cnt) + '-' * 120)
-        cnt += 1
-        print(datetime.now())
-        if key % 256 == 27:
-            # ESC pressed
-            print("Escape hit, closing...")
-            break
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
 
     cam.release()
     cv2.destroyAllWindows()

@@ -97,10 +97,7 @@ def main():
         if args.webcam and args.social:
             from . import predict_social
             predict_social.predict(args)
-<<<<<<< HEAD
 
-=======
->>>>>>> 8a8e861f11a6c38581f877182474668caa077e98
         elif args.webcam:
             from .visuals.webcam import webcam
             webcam(args)
