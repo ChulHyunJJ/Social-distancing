@@ -139,7 +139,11 @@ def show_social(args, image_t, output_path, annotations, dic_out):
     colors = ['r' if social_distance(xz_centers, angles, idx) else 'deepskyblue'
               for idx, _ in enumerate(dic_out['xyz_pred'])]
 
-    if 'front' in args.output_types:
+    if colors == 'r':
+        cv2.imwrite(output_path + '_violate.png', image_t)
+        print('Violation is detected')
+
+    if 'front' and 'bird' in args.output_types:
         # Prepare colors
         keypoint_sets, scores = get_pifpaf_outputs(annotations)
         uv_centers = dic_out['uv_heads']
@@ -153,10 +157,29 @@ def show_social(args, image_t, output_path, annotations, dic_out):
                           dpi_factor=1.0) as ax:
             keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
             draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
+            with bird_canvas(args, output_path, show=args.show) as ax1:
+                draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
 
-    if 'bird' in args.output_types:
-        with bird_canvas(args, output_path) as ax1:
-            draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
+    else:
+        if 'front' in args.output_types:
+            # Prepare colors
+            keypoint_sets, scores = get_pifpaf_outputs(annotations)
+            uv_centers = dic_out['uv_heads']
+            sizes = [abs(dic_out['uv_heads'][idx][1] - uv_s[1]) / 1.5 for idx, uv_s in enumerate(dic_out['uv_shoulders'])]
+
+            keypoint_painter = KeypointPainter(show_box=False)
+            with image_canvas(image_t,
+                              output_path + '_front.png',
+                              show=args.show,
+                              fig_width=10,
+                              dpi_factor=1.0) as ax:
+                keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
+                draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
+
+
+        if 'bird' in args.output_types:
+            with bird_canvas(args, output_path, show=args.show) as ax1:
+                draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
 
 
 def draw_orientation(ax, centers, sizes, angles, colors, mode):
@@ -269,7 +292,7 @@ def get_pifpaf_outputs(annotations):
     return keypoints_sets, scores
 
 @contextmanager
-def bird_canvas(args, output_path):
+def bird_canvas(args, output_path, show=True):
     fig, ax = plt.subplots(1, 1)
     fig.set_tight_layout(True)
     output_path = output_path + '_bird.png'
@@ -279,5 +302,7 @@ def bird_canvas(args, output_path):
     ax.set_ylim(0, args.z_max + 1)
     yield ax
     fig.savefig(output_path)
+    if show:
+        plt.show()
     plt.close(fig)
     print('Bird-eye-view image saved')
