@@ -1,0 +1,27 @@
+2019-05-13 14:37:31,350:INFO: Training arguments: 
+epochs: 150 
+batch_size: 256 
+dropout: 0.2
+baseline: False 
+learning rate: 0.002 
+scheduler step: 20 
+scheduler gamma: 0.9  
+input_size: 34 
+hidden_size: 256 
+n_stages: 3 
+r_seed: 1
+input_file: data/arrays/joints-nuscenes_teaser-190513-1423.json
+2019-05-13 14:37:34,494:INFO: Sizes of the dataset: {'train': 8405, 'val': 5276, 'test': 0}
+2019-05-13 14:38:56,010:INFO: Training complete in 1m 19s
+2019-05-13 14:38:56,010:INFO: Best val Acc: 1.745997
+2019-05-13 14:38:56,010:INFO: Saved weights of the model at epoch: 131
+
+2019-05-13 14:38:57,404:INFO: 
+Average distance on the val set: 1.75
+2019-05-13 14:38:57,404:INFO: Aleatoric Uncertainty: 1.59, inside the interval: 55.4%
+2019-05-13 14:38:58,019:INFO: val error in cluster 10 = 0.75 for 959 instances. Aleatoric of 0.66 with 54.3% inside the interval
+2019-05-13 14:38:58,043:INFO: val error in cluster 20 = 1.18 for 1845 instances. Aleatoric of 1.14 with 58.8% inside the interval
+2019-05-13 14:38:58,046:INFO: val error in cluster 30 = 2.08 for 1408 instances. Aleatoric of 1.88 with 53.8% inside the interval
+2019-05-13 14:38:58,049:INFO: val error in cluster >30 = 3.18 for 1064 instances. Aleatoric of 2.79 with 52.7% inside the interval
+2019-05-13 14:38:58,052:INFO: model saved: data/models/monoloco-190513-1437.pkl 
+
