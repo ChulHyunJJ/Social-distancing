@@ -85,8 +85,8 @@ FFMPEG 라이브러리를 통해 이미지로 변환하여 입력으로 사용�
 
 Video --> Images:
 
-`ffmpeg -i original_video.mov -vf fps=6 frames/%03d.png`
+`ffmpeg -i data/videos/park.mp4 -vf fps=6 data/images/%03d.png`
 
 Images --> Video:
 
-`ffmpeg -r 6 -f image2 -i figures/images/%03d.png.front.png -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" processed_video.mp4`
+`ffmpeg -r 6 -f image2 -i data/output/%03d.png.front.png -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" processed_video.mp4`
