@@ -39,8 +39,8 @@ python -m monoloco.run predict \
 --networks monoloco \
 --output_type front bird \
 --model data/models/social.pkl \
--o data/output/ \
---z_max 10 \
+-o data/output \ 
+--z_max 30
 ```
 
 2. 웹캠으로 실시간 비디오 불러오기
@@ -68,10 +68,10 @@ python -m monoloco.run predict \
 
 ```
 python -m monoloco.run predict \
+--model data/models/social.pkl \
 --glob "data/images/*.png" \
 --networks pifpaf \
---output_types json \ 
---model data/models/social.pkl \
+--output_types json \
 -o data/output/ \
 --instance-threshold 0.4 
 ```
