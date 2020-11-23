@@ -95,14 +95,16 @@ def main():
     args = cli()
     if args.command == 'predict':
         if args.webcam and args.social:
-            from . import predict_social
-            predict_social.predict(args)
+            from . import predict_live
+            predict_live.predict(args)
 
         elif args.webcam:
             from .visuals.webcam import webcam
             webcam(args)
-            #    from . import predict
-            #    predict.predict(args)
+
+        elif args.social:
+            from . import predict_social
+            predict_social.predict(args)
 
     elif args.command == 'prep':
         if 'nuscenes' in args.dataset:

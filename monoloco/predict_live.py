@@ -1,127 +1,149 @@
+from datetime import datetime
 
-import os
-import glob
 import math
 from contextlib import contextmanager
 
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 from matplotlib.patches import Circle, FancyArrow
 import torch
-import torchvision
 from PIL import Image
 
-from .visuals.pifpaf_show import KeypointPainter, image_canvas
-from .network import MonoLoco
-from .network.process import factory_for_gt, preprocess_pifpaf
-from .utils import open_annotations
+from pydub import AudioSegment
+from pydub.playback import play
 
+from .visuals.pifpaf_show import KeypointPainter, image_canvas
+from .network import MonoLoco, PifPaf
+from .network.process import factory_for_gt, preprocess_pifpaf, image_transform
+
+from monoloco.multithread.VideoGet import VideoGet
 
 def predict(args):
-
     cnt = 0
+    # add args.device
     args.device = torch.device('cpu')
     if torch.cuda.is_available():
         args.device = torch.device('cuda')
 
-    # Load data and model
+
+    # load models
+    args.camera = True
+    camera_num = 0
+    pifpaf = PifPaf(args)
     monoloco = MonoLoco(model=args.model, device=args.device)
-    images = []
-    images += glob.glob(args.glob)  # from cli as a string or linux converts
 
-    # Option 1: Run PifPaf extract poses and run MonoLoco in a single forward pass
-    if args.json_dir is None:
-        from .network import PifPaf, ImageList
-        pifpaf = PifPaf(args)
-        data = ImageList(args.images, scale=args.scale)
-        data_loader = torch.utils.data.DataLoader(
-            data, batch_size=1, shuffle=False,
-            pin_memory=args.pin_memory, num_workers=args.loader_workers)
+    # Start recording
+    print('Webcam On')
+    video_getter = VideoGet(camera_num).start()
 
-        for idx, (image_paths, image_tensors, processed_images_cpu) in enumerate(data_loader):
-            images = image_tensors.permute(0, 2, 3, 1)
+    while True:
+        if video_getter.stopped:
+            video_getter.stop()
+            break
 
-            processed_images = processed_images_cpu.to(args.device, non_blocking=True)
-            fields_batch = pifpaf.fields(processed_images)
+        frame = video_getter.frame
 
-            # unbatch
-            for image_path, image, processed_image_cpu, fields in zip(
-                    image_paths, images, processed_images_cpu, fields_batch):
+        image = cv2.resize(frame, None, fx=args.scale, fy=args.scale)
+        height, width, _ = image.shape
+        print('resized image size: {}'.format(image.shape))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-                if args.output_directory is None:
-                    output_path = image_path
-                else:
-                    file_name = os.path.basename(image_path)
-                    output_path = os.path.join(args.output_directory, file_name)
-                im_size = (float(image.size()[1] / args.scale),
-                           float(image.size()[0] / args.scale))
+        print('Image processing')
+        processed_image_cpu = image_transform(image.copy())
+        processed_image = processed_image_cpu.contiguous().to(args.device, non_blocking=True)
+        fields = pifpaf.fields(torch.unsqueeze(processed_image, 0))[0]
+        _, _, pifpaf_out = pifpaf.forward(image, processed_image_cpu, fields)
 
-                print('image', idx, image_path, output_path)
+        key = cv2.waitKey(1)
+        if key % 256 == 27:
+            # ESC pressed
+            print("Escape hit, closing...")
+            break
 
-                _, _, pifpaf_out = pifpaf.forward(image, processed_image_cpu, fields)
+        pil_image = Image.fromarray(image)
+        intrinsic_size = [xx * 1.3 for xx in pil_image.size]
 
-                kk, dic_gt = factory_for_gt(im_size, name=image_path, path_gt=args.path_gt)
-                image_t = image
+        if args.output_directory is None:
+            output_path = './data/output/'
+        else:
+            output_path = args.output_directory
 
-                # Run Monoloco
-                boxes, keypoints = preprocess_pifpaf(pifpaf_out, im_size, enlarge_boxes=False)
-                dic_out = monoloco.forward(keypoints, kk)
-                dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
+        kk, dic_gt = factory_for_gt(intrinsic_size, path_gt=args.path_gt)
+        image_t = image
 
-                # Print
-                show_social(args, image_t, output_path, pifpaf_out, dic_out)
+        print('Run monoloco')
+        # Run Monoloco
+        boxes, keypoints = preprocess_pifpaf(pifpaf_out, intrinsic_size, enlarge_boxes=False)
+        dic_out = monoloco.forward(keypoints, kk)
+        dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
 
-                print('Image {}\n'.format(cnt) + '-' * 120)
-                cnt += 1
+        # Print
+        file_name = str(datetime.now())
+        show_social(args, image_t, output_path + file_name, pifpaf_out, dic_out)
+        print('Image {}\n'.format(cnt) + '-' * 120)
+        cnt += 1
+
+
+    cv2.VideoCapture(camera_num).release()
+    cv2.destroyAllWindows()
 
     # Option 2: Load json file of poses from PifPaf and run monoloco
-    else:
-        for idx, im_path in enumerate(images):
-
-            # Load image
-            with open(im_path, 'rb') as f:
-                image = Image.open(f).convert('RGB')
-            if args.output_directory is None:
-                output_path = im_path
-            else:
-                file_name = os.path.basename(im_path)
-                output_path = os.path.join(args.output_directory, file_name)
-
-            im_size = (float(image.size[0] / args.scale),
-                       float(image.size[1] / args.scale))  # Width, Height (original)
-            kk, dic_gt = factory_for_gt(im_size, name=im_path, path_gt=args.path_gt)
-            image_t = torchvision.transforms.functional.to_tensor(image).permute(1, 2, 0)
-
-            # Load json
-            basename, ext = os.path.splitext(os.path.basename(im_path))
-            extension = ext + '.pifpaf.json'
-            path_json = os.path.join(args.json_dir, basename + extension)
-            annotations = open_annotations(path_json)
-
-            # Run Monoloco
-            boxes, keypoints = preprocess_pifpaf(annotations, im_size, enlarge_boxes=False)
-            dic_out = monoloco.forward(keypoints, kk)
-            dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
-
-            # Print
-            show_social(args, image_t, output_path, annotations, dic_out)
-
-            print('Image {}\n'.format(cnt) + '-' * 120)
-            cnt += 1
+    # else:
+    #     for idx, im_path in enumerate(images):
+    #
+    #         # Load image
+    #         with open(im_path, 'rb') as f:
+    #             image = Image.open(f).convert('RGB')
+    #         if args.output_directory is None:
+    #             output_path = im_path
+    #         else:
+    #             file_name = os.path.basename(im_path)
+    #             output_path = os.path.join(args.output_directory, file_name)
+    #
+    #         im_size = (float(image.size[0] / args.scale),
+    #                    float(image.size[1] / args.scale))  # Width, Height (original)
+    #         kk, dic_gt = factory_for_gt(im_size, name=im_path, path_gt=args.path_gt)
+    #         image_t = torchvision.transforms.functional.to_tensor(image).permute(1, 2, 0)
+    #
+    #         # Load json
+    #         basename, ext = os.path.splitext(os.path.basename(im_path))
+    #         extension = ext + '.pifpaf.json'
+    #         path_json = os.path.join(args.json_dir, basename + extension)
+    #         annotations = open_annotations(path_json)
+    #
+    #         # Run Monoloco
+    #         boxes, keypoints = preprocess_pifpaf(annotations, im_size, enlarge_boxes=False)
+    #         dic_out = monoloco.forward(keypoints, kk)
+    #         dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
+    #
+    #         # Print
+    #         show_social(args, image_t, output_path, annotations, dic_out)
+    #
+    #         print('Image {}\n'.format(cnt) + '-' * 120)
+    #         cnt += 1
 
 
 def show_social(args, image_t, output_path, annotations, dic_out):
     """Output frontal image with poses or combined with bird eye view"""
 
     assert 'front' in args.output_types or 'bird' in args.output_types, "outputs allowed: front and/or bird"
+    #warning sounds
+    song = AudioSegment.from_mp3("data/sounds/warning.mp3")
 
     angles = dic_out['angles']
     xz_centers = [[xx[0], xx[2]] for xx in dic_out['xyz_pred']]
+    image_t = putdatetime(image_t, datetime.now())
 
     colors = ['r' if social_distance(xz_centers, angles, idx) else 'deepskyblue'
               for idx, _ in enumerate(dic_out['xyz_pred'])]
 
-    if 'front' in args.output_types:
+    if colors == 'r':
+        cv2.imwrite(output_path + '_violate.png', image_t)
+        print('Violation is detected')
+        play(song)
+
+    if 'front' and 'bird' in args.output_types:
         # Prepare colors
         keypoint_sets, scores = get_pifpaf_outputs(annotations)
         uv_centers = dic_out['uv_heads']
@@ -129,16 +151,37 @@ def show_social(args, image_t, output_path, annotations, dic_out):
 
         keypoint_painter = KeypointPainter(show_box=False)
         with image_canvas(image_t,
-                          output_path + '.front.png',
+                          output_path + '_front.png',
                           show=args.show,
                           fig_width=10,
                           dpi_factor=1.0) as ax:
             keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
             draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
 
-    if 'bird' in args.output_types:
-        with bird_canvas(args, output_path) as ax1:
-            draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
+            with bird_canvas(args, output_path, show=args.show) as ax1:
+                draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
+                play(song)
+
+    else:
+        if 'front' in args.output_types:
+            # Prepare colors
+            keypoint_sets, scores = get_pifpaf_outputs(annotations)
+            uv_centers = dic_out['uv_heads']
+            sizes = [abs(dic_out['uv_heads'][idx][1] - uv_s[1]) / 1.5 for idx, uv_s in enumerate(dic_out['uv_shoulders'])]
+
+            keypoint_painter = KeypointPainter(show_box=False)
+            with image_canvas(image_t,
+                              output_path + '_front.png',
+                              show=args.show,
+                              fig_width=10,
+                              dpi_factor=1.0) as ax:
+                keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
+                draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
+
+
+        elif 'bird' in args.output_types:
+            with bird_canvas(args, output_path, show=args.show) as ax1:
+                draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
 
 
 def draw_orientation(ax, centers, sizes, angles, colors, mode):
@@ -250,17 +293,29 @@ def get_pifpaf_outputs(annotations):
     scores = np.sum(score_weights * ordered_kps_scores, axis=1)
     return keypoints_sets, scores
 
-
 @contextmanager
-def bird_canvas(args, output_path):
+def bird_canvas(args, output_path, show=True):
     fig, ax = plt.subplots(1, 1)
     fig.set_tight_layout(True)
-    output_path = output_path + '.bird.png'
+    output_path = output_path + '_bird.png'
     x_max = args.z_max / 1.5
     ax.plot([0, x_max], [0, args.z_max], 'k--')
     ax.plot([0, -x_max], [0, args.z_max], 'k--')
     ax.set_ylim(0, args.z_max + 1)
     yield ax
+
     fig.savefig(output_path)
+    if show:
+        fig.canvas.flush_events()
+        fig.canvas.draw()
+        plt.pause(0.001)
     plt.close(fig)
     print('Bird-eye-view image saved')
+
+def putdatetime(frame, time):
+    """
+    Add iterations per second text to lower-left corner of a frame.
+    """
+    cv2.putText(frame, "{:.0f}".format(time),
+        (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
+    return frame
