@@ -1,26 +1,20 @@
 from datetime import datetime
 
-import time
-import os
-import glob
 import math
 from contextlib import contextmanager
 
 import numpy as np
-import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
 import cv2
 from matplotlib.patches import Circle, FancyArrow
 import torch
-import torchvision
 from PIL import Image
 
 from .visuals.pifpaf_show import KeypointPainter, image_canvas
 from .network import MonoLoco, PifPaf
 from .network.process import factory_for_gt, preprocess_pifpaf, image_transform
-from .utils import open_annotations
 
-
+from monoloco.multithread.VideoGet import VideoGet
 
 def predict(args):
     cnt = 0
@@ -32,17 +26,20 @@ def predict(args):
 
     # load models
     args.camera = True
+    camera_num = 0
     pifpaf = PifPaf(args)
     monoloco = MonoLoco(model=args.model, device=args.device)
 
     # Start recording
     print('Webcam On')
-    cam = cv2.VideoCapture(0)
+    video_getter = VideoGet(camera_num).start()
 
     while True:
-        file_name = str(datetime.now())
+        if video_getter.stopped:
+            video_getter.stop()
+            break
 
-        ret, frame = cam.read()
+        frame = video_getter.frame
 
         image = cv2.resize(frame, None, fx=args.scale, fy=args.scale)
         height, width, _ = image.shape
@@ -55,10 +52,7 @@ def predict(args):
         fields = pifpaf.fields(torch.unsqueeze(processed_image, 0))[0]
         _, _, pifpaf_out = pifpaf.forward(image, processed_image_cpu, fields)
 
-        if not ret:
-            break
         key = cv2.waitKey(1)
-
         if key % 256 == 27:
             # ESC pressed
             print("Escape hit, closing...")
@@ -82,14 +76,13 @@ def predict(args):
         dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
 
         # Print
+        file_name = str(datetime.now())
         show_social(args, image_t, output_path + file_name, pifpaf_out, dic_out)
-        print(datetime.now())
         print('Image {}\n'.format(cnt) + '-' * 120)
         cnt += 1
 
-        print(datetime.now())
 
-    cam.release()
+    cv2.VideoCapture(0).release()
     cv2.destroyAllWindows()
 
     # Option 2: Load json file of poses from PifPaf and run monoloco
@@ -135,6 +128,7 @@ def show_social(args, image_t, output_path, annotations, dic_out):
 
     angles = dic_out['angles']
     xz_centers = [[xx[0], xx[2]] for xx in dic_out['xyz_pred']]
+    image_t = putdatetime(image_t, datetime.now())
 
     colors = ['r' if social_distance(xz_centers, angles, idx) else 'deepskyblue'
               for idx, _ in enumerate(dic_out['xyz_pred'])]
@@ -159,6 +153,7 @@ def show_social(args, image_t, output_path, annotations, dic_out):
             draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
             with bird_canvas(args, output_path, show=args.show) as ax1:
                 draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
+
 
     else:
         if 'front' in args.output_types:
@@ -301,8 +296,17 @@ def bird_canvas(args, output_path, show=True):
     ax.plot([0, -x_max], [0, args.z_max], 'k--')
     ax.set_ylim(0, args.z_max + 1)
     yield ax
+
     fig.savefig(output_path)
     if show:
         plt.show()
     plt.close(fig)
     print('Bird-eye-view image saved')
+
+def putdatetime(frame, time):
+    """
+    Add iterations per second text to lower-left corner of a frame.
+    """
+    cv2.putText(frame, "{:.0f}".format(time),
+        (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
+    return frame
