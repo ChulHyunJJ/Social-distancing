@@ -29,9 +29,25 @@ pip3 install pydub==0.24.1
 - 사람의 자세 및 시선 방향 인식
 - *point of view* 로 부터의 거리 인식
 
+
+## 비디오
+현재 코드는 비디오를 입력으로 받는 것을 지원하지 않습니다.
+
+FFMPEG 라이브러리를 통해 이미지로 변환하여 입력으로 사용할 수 있습니다.
+
+Video --> Images:
+
+`ffmpeg -i data/videos/park.mp4 -vf fps=6 data/images/%03d.png`
+
+Images --> Video:
+
+`ffmpeg -r 6 -f image2 -i data/output/%03d.png.front.png -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" processed_video.mp4`
+
 ## 데모 실행
 
 1. 데모 이미지로 결과 출력하기 (기본 저장소 위치는 ./data/output/ 입니다.)
+
+`ffmpeg -i data/videos/park.mp4 -vf fps=6 data/images/%03d.png` 를 실행하여 데모 이미지를 만듭니다.
 ```
 python -m monoloco.run predict \
 --social \
@@ -62,6 +78,8 @@ python -m monoloco.run predict \
 ## Json 파일
 정확한 거리 파악을 위해서는 Json 파일이 필요합니다.
 
+Json 파일이 없더라도 상대적인 거리는 유의미하기 때문에 Json 파일이 없는 경우에도 제한된 환경에서 사용할 수 있습니다.
+
 이미 존재하는 Json 파일을 불러오기 위해서는
 
 `--json_dir <directory of json files>` 으로 불러올 수 있으며 없는 경우 생성할 수 있습니다.
@@ -78,15 +96,3 @@ python -m monoloco.run predict \
 
 pifpaf 를 통해 Json 파일을 생성할 수 있습니다. 
 
-## 비디오
-현재 코드는 비디오를 입력으로 받는 것을 지원하지 않습니다.
-
-FFMPEG 라이브러리를 통해 이미지로 변환하여 입력으로 사용할 수 있습니다.
-
-Video --> Images:
-
-`ffmpeg -i data/videos/park.mp4 -vf fps=6 data/images/%03d.png`
-
-Images --> Video:
-
-`ffmpeg -r 6 -f image2 -i data/output/%03d.png.front.png -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" processed_video.mp4`
