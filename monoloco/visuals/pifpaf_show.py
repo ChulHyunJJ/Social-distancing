@@ -50,14 +50,15 @@ def image_canvas(image, fig_file=None, show=True, dpi_factor=1.0, fig_width=10.0
     image_2 = ndimage.gaussian_filter(image, sigma=2.5)
     ax.imshow(image_2, alpha=0.4)
 
-
     yield ax
 
     if fig_file:
         fig.savefig(fig_file, dpi=image.shape[1] / kwargs['figsize'][0] * dpi_factor)
         print('keypoints image saved')
+
     if show:
-        plt.show()
+        fig.canvas.flush_events()
+        fig.canvas.draw()
     plt.close(fig)
 
 

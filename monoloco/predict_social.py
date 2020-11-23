@@ -82,7 +82,7 @@ def predict(args):
         cnt += 1
 
 
-    cv2.VideoCapture(0).release()
+    cv2.VideoCapture(camera_num).release()
     cv2.destroyAllWindows()
 
     # Option 2: Load json file of poses from PifPaf and run monoloco
@@ -151,30 +151,29 @@ def show_social(args, image_t, output_path, annotations, dic_out):
                           dpi_factor=1.0) as ax:
             keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
             draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
+
             with bird_canvas(args, output_path, show=args.show) as ax1:
                 draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
 
-
-    else:
-        if 'front' in args.output_types:
-            # Prepare colors
-            keypoint_sets, scores = get_pifpaf_outputs(annotations)
-            uv_centers = dic_out['uv_heads']
-            sizes = [abs(dic_out['uv_heads'][idx][1] - uv_s[1]) / 1.5 for idx, uv_s in enumerate(dic_out['uv_shoulders'])]
-
-            keypoint_painter = KeypointPainter(show_box=False)
-            with image_canvas(image_t,
-                              output_path + '_front.png',
-                              show=args.show,
-                              fig_width=10,
-                              dpi_factor=1.0) as ax:
-                keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
-                draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
-
-
-        if 'bird' in args.output_types:
-            with bird_canvas(args, output_path, show=args.show) as ax1:
-                draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
+    # if 'front' in args.output_types:
+    #     # Prepare colors
+    #     keypoint_sets, scores = get_pifpaf_outputs(annotations)
+    #     uv_centers = dic_out['uv_heads']
+    #     sizes = [abs(dic_out['uv_heads'][idx][1] - uv_s[1]) / 1.5 for idx, uv_s in enumerate(dic_out['uv_shoulders'])]
+    #
+    #     keypoint_painter = KeypointPainter(show_box=False)
+    #     with image_canvas(image_t,
+    #                       output_path + '_front.png',
+    #                       show=args.show,
+    #                       fig_width=10,
+    #                       dpi_factor=1.0) as ax:
+    #         keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
+    #         draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
+    #
+    #
+    # if 'bird' in args.output_types:
+    #     with bird_canvas(args, output_path, show=args.show) as ax1:
+    #         draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
 
 
 def draw_orientation(ax, centers, sizes, angles, colors, mode):
@@ -299,7 +298,9 @@ def bird_canvas(args, output_path, show=True):
 
     fig.savefig(output_path)
     if show:
-        plt.show()
+        fig.canvas.flush_events()
+        fig.canvas.draw()
+        plt.pause(0.001)
     plt.close(fig)
     print('Bird-eye-view image saved')
 
