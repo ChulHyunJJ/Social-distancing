@@ -68,7 +68,7 @@ python -m monoloco.run predict \
 
 ```
 python -m monoloco.run predict \
---glob "data/images/000.png" \
+--glob "data/images/*.png" \
 --networks pifpaf \
 --output_types json \ 
 --model data/models/social.pkl \
