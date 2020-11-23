@@ -82,7 +82,7 @@ Json 파일이 없더라도 상대적인 거리는 유의미하기 때문에 Jso
 
 이미 존재하는 Json 파일을 불러오기 위해서는
 
-`--json_dir <directory of json files>` 으로 불러올 수 있으며 없는 경우 생성할 수 있습니다.
+`--json_dir <directory of json files>` 으로 불러올 수 있으며 없는 경우 pifpaf 를 통해 Json 파일을 생성할 수 있습니다.
 
 ```
 python -m monoloco.run predict \
@@ -93,6 +93,3 @@ python -m monoloco.run predict \
 -o data/output/ \
 --instance-threshold 0.4 
 ```
-
-pifpaf 를 통해 Json 파일을 생성할 수 있습니다. 
-
