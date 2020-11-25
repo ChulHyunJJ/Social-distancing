@@ -21,7 +21,8 @@ from .utils import open_annotations
 
 
 def predict(args):
-
+    #warning sounds
+    song = AudioSegment.from_mp3("data/sounds/warning.mp3")
     cnt = 0
     args.device = torch.device('cpu')
     if torch.cuda.is_available():
@@ -72,7 +73,7 @@ def predict(args):
                 dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
 
                 # Print
-                show_social(args, image_t, output_path, pifpaf_out, dic_out)
+                show_social(args, image_t, output_path, pifpaf_out, dic_out, song)
 
                 print('Image {}\n'.format(cnt) + '-' * 120)
                 cnt += 1
@@ -113,11 +114,9 @@ def predict(args):
             cnt += 1
 
 
-def show_social(args, image_t, output_path, annotations, dic_out):
+def show_social(args, image_t, output_path, annotations, dic_out, song):
     """Output frontal image with poses or combined with bird eye view"""
-
     assert 'front' in args.output_types or 'bird' in args.output_types, "outputs allowed: front and/or bird"
-    song = AudioSegment.from_mp3("data/sounds/warning.mp3")
     angles = dic_out['angles']
     xz_centers = [[xx[0], xx[2]] for xx in dic_out['xyz_pred']]
 

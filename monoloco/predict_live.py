@@ -20,6 +20,8 @@ from .network.process import factory_for_gt, preprocess_pifpaf, image_transform
 from monoloco.multithread.VideoGet import VideoGet
 
 def predict(args):
+    #warning sounds
+    song = AudioSegment.from_mp3("data/sounds/warning.mp3")
     cnt = 0
     # add args.device
     args.device = torch.device('cpu')
@@ -80,7 +82,7 @@ def predict(args):
 
         # Print
         file_name = str(datetime.now())
-        show_social(args, image_t, output_path, file_name, pifpaf_out, dic_out)
+        show_social(args, image_t, output_path, file_name, pifpaf_out, dic_out, song)
         print('Image {}\n'.format(cnt) + '-' * 120)
         cnt += 1
 
@@ -128,8 +130,6 @@ def show_social(args, image_t, output_path, file_name, annotations, dic_out):
     """Output frontal image with poses or combined with bird eye view"""
 
     assert 'front' in args.output_types or 'bird' in args.output_types, "outputs allowed: front and/or bird"
-    #warning sounds
-    song = AudioSegment.from_mp3("data/sounds/warning.mp3")
 
     angles = dic_out['angles']
     xz_centers = [[xx[0], xx[2]] for xx in dic_out['xyz_pred']]
