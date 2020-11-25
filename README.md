@@ -19,6 +19,7 @@ pip3 install torch==1.1.0
 pip3 install torchvision==0.3.0
 pip3 install openpifpaf==0.9.0
 pip3 install pydub==0.24.1
+pip3 install opencv-python==4.0.0.21
 ```
 
 설치가 끝났으면 Git 을 통해 복사합니다.<br><br>
