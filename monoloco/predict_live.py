@@ -90,43 +90,7 @@ def predict(args):
     cv2.VideoCapture(camera_num).release()
     cv2.destroyAllWindows()
 
-    # Option 2: Load json file of poses from PifPaf and run monoloco
-    # else:
-    #     for idx, im_path in enumerate(images):
-    #
-    #         # Load image
-    #         with open(im_path, 'rb') as f:
-    #             image = Image.open(f).convert('RGB')
-    #         if args.output_directory is None:
-    #             output_path = im_path
-    #         else:
-    #             file_name = os.path.basename(im_path)
-    #             output_path = os.path.join(args.output_directory, file_name)
-    #
-    #         im_size = (float(image.size[0] / args.scale),
-    #                    float(image.size[1] / args.scale))  # Width, Height (original)
-    #         kk, dic_gt = factory_for_gt(im_size, name=im_path, path_gt=args.path_gt)
-    #         image_t = torchvision.transforms.functional.to_tensor(image).permute(1, 2, 0)
-    #
-    #         # Load json
-    #         basename, ext = os.path.splitext(os.path.basename(im_path))
-    #         extension = ext + '.pifpaf.json'
-    #         path_json = os.path.join(args.json_dir, basename + extension)
-    #         annotations = open_annotations(path_json)
-    #
-    #         # Run Monoloco
-    #         boxes, keypoints = preprocess_pifpaf(annotations, im_size, enlarge_boxes=False)
-    #         dic_out = monoloco.forward(keypoints, kk)
-    #         dic_out = monoloco.post_process(dic_out, boxes, keypoints, kk, dic_gt, reorder=False)
-    #
-    #         # Print
-    #         show_social(args, image_t, output_path, annotations, dic_out)
-    #
-    #         print('Image {}\n'.format(cnt) + '-' * 120)
-    #         cnt += 1
-
-
-def show_social(args, image_t, output_path, file_name, annotations, dic_out):
+def show_social(args, image_t, output_path, file_name, annotations, dic_out, song):
     """Output frontal image with poses or combined with bird eye view"""
 
     assert 'front' in args.output_types or 'bird' in args.output_types, "outputs allowed: front and/or bird"
