@@ -33,6 +33,7 @@ def cli():
                                 help='what to output: json keypoints skeleton for Pifpaf'
                                      'json bird front combined for Monoloco')
     predict_parser.add_argument('--show', help='to show images', action='store_true')
+    predict_parser.add_argument('--sound', help='sound on/off', action='store_true')
 
     # Pifpaf
     nets.cli(predict_parser)

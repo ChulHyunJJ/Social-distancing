@@ -10,6 +10,9 @@ from matplotlib.patches import Circle, FancyArrow
 import torch
 import torchvision
 from PIL import Image
+import cv2
+from pydub import AudioSegment
+from pydub.playback import play
 
 from .visuals.pifpaf_show import KeypointPainter, image_canvas
 from .network import MonoLoco
@@ -114,12 +117,18 @@ def show_social(args, image_t, output_path, annotations, dic_out):
     """Output frontal image with poses or combined with bird eye view"""
 
     assert 'front' in args.output_types or 'bird' in args.output_types, "outputs allowed: front and/or bird"
-
+    song = AudioSegment.from_mp3("data/sounds/warning.mp3")
     angles = dic_out['angles']
     xz_centers = [[xx[0], xx[2]] for xx in dic_out['xyz_pred']]
 
     colors = ['r' if social_distance(xz_centers, angles, idx) else 'deepskyblue'
               for idx, _ in enumerate(dic_out['xyz_pred'])]
+
+    if 'r' in colors:
+        cv2.imwrite(output_path + '_violate.png', np.asarray(image_t) * 255)
+        print('Violation is detected')
+        if args.sound:
+            play(song)
 
     if 'front' in args.output_types:
         # Prepare colors

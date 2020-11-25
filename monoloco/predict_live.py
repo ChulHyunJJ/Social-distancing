@@ -80,7 +80,7 @@ def predict(args):
 
         # Print
         file_name = str(datetime.now())
-        show_social(args, image_t, output_path + file_name, pifpaf_out, dic_out)
+        show_social(args, image_t, output_path, file_name, pifpaf_out, dic_out)
         print('Image {}\n'.format(cnt) + '-' * 120)
         cnt += 1
 
@@ -124,7 +124,7 @@ def predict(args):
     #         cnt += 1
 
 
-def show_social(args, image_t, output_path, annotations, dic_out):
+def show_social(args, image_t, output_path, file_name, annotations, dic_out):
     """Output frontal image with poses or combined with bird eye view"""
 
     assert 'front' in args.output_types or 'bird' in args.output_types, "outputs allowed: front and/or bird"
@@ -138,10 +138,12 @@ def show_social(args, image_t, output_path, annotations, dic_out):
     colors = ['r' if social_distance(xz_centers, angles, idx) else 'deepskyblue'
               for idx, _ in enumerate(dic_out['xyz_pred'])]
 
-    if colors == 'r':
-        cv2.imwrite(output_path + '_violate.png', image_t)
+    if 'r' in colors:
+        image_t = cv2.cvtColor(image_t, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(output_path + file_name + '_violate.png', np.asarray(image_t) * 255)
         print('Violation is detected')
-        play(song)
+        if args.sound:
+            play(song)
 
     if 'front' and 'bird' in args.output_types:
         # Prepare colors
@@ -151,14 +153,14 @@ def show_social(args, image_t, output_path, annotations, dic_out):
 
         keypoint_painter = KeypointPainter(show_box=False)
         with image_canvas(image_t,
-                          output_path + '_front.png',
+                          output_path + file_name + '_front.png',
                           show=args.show,
                           fig_width=10,
                           dpi_factor=1.0) as ax:
             keypoint_painter.keypoints(ax, keypoint_sets, colors=colors)
             draw_orientation(ax, uv_centers, sizes, angles, colors, mode='front')
 
-            with bird_canvas(args, output_path, show=args.show) as ax1:
+            with bird_canvas(args, output_path, file_name, show=args.show) as ax1:
                 draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
                 play(song)
 
@@ -180,7 +182,7 @@ def show_social(args, image_t, output_path, annotations, dic_out):
 
 
         elif 'bird' in args.output_types:
-            with bird_canvas(args, output_path, show=args.show) as ax1:
+            with bird_canvas(args, output_path, file_name, show=args.show) as ax1:
                 draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
 
 
@@ -294,10 +296,10 @@ def get_pifpaf_outputs(annotations):
     return keypoints_sets, scores
 
 @contextmanager
-def bird_canvas(args, output_path, show=True):
+def bird_canvas(args, output_path, file_name, show=True):
     fig, ax = plt.subplots(1, 1)
     fig.set_tight_layout(True)
-    output_path = output_path + '_bird.png'
+    output_path = output_path + file_name +'_bird.png'
     x_max = args.z_max / 1.5
     ax.plot([0, x_max], [0, args.z_max], 'k--')
     ax.plot([0, -x_max], [0, args.z_max], 'k--')
