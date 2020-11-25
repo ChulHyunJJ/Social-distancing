@@ -77,9 +77,9 @@ python -m monoloco.run predict \
 옵션에 대한 자세한 설명은 `python3 -m monoloco.run predict --help` 을 통해 알아보거나 `'run.py'` 코드를 참조해주세요.
 
 ## Json 파일
-정확한 거리 파악을 위해서는 Json 파일이 필요합니다.
+*Point of view* 로 부터의 정확한 거리 파악을 위해서는 Json 파일이 필요합니다.
 
-Json 파일이 없더라도 상대적인 거리는 유의미하기 때문에 Json 파일이 없는 경우에도 제한된 환경에서 사용할 수 있습니다.
+Json 파일이 없더라도 상대적인 거리는 유의미하기 때문에 Json 파일이 없는 경우에도 접촉을 감지할 수 있습니다.
 
 이미 존재하는 Json 파일을 불러오기 위해서는
 
