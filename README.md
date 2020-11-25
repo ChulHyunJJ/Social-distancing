@@ -55,7 +55,7 @@ python -m monoloco.run predict \
 --networks monoloco \
 --output_type front bird \
 --model data/models/social.pkl \
--o data/output \ 
+-o data/output/ \
 --z_max 30
 ```
 
