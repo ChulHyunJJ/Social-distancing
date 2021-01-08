@@ -103,8 +103,8 @@ def show_social(args, image_t, output_path, file_name, annotations, dic_out, son
               for idx, _ in enumerate(dic_out['xyz_pred'])]
 
     if 'r' in colors:
-        image_t = cv2.cvtColor(image_t, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(output_path + file_name + '_violate.png', np.asarray(image_t) * 255)
+        image_save = cv2.cvtColor(image_t, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(output_path + file_name + '_violate.png', np.asarray(image_save) * 255)
         print('Violation is detected')
         if args.sound:
             play(song)
@@ -126,7 +126,8 @@ def show_social(args, image_t, output_path, file_name, annotations, dic_out, son
 
             with bird_canvas(args, output_path, file_name, show=args.show) as ax1:
                 draw_orientation(ax1, xz_centers, [], angles, colors, mode='bird')
-                play(song)
+
+
 
     else:
         if 'front' in args.output_types:
